@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -22,9 +23,9 @@ type RedisConfig struct {
 }
 
 type HTTPServer struct {
-	Address     string `env:"ADDRESS" env-default:"localhost:8080"`
-	Timeout     string `env:"TIMEOUT" env-default:"4s"`
-	IdleTimeout string `env:"IDLE_TIMEOUT" env-default:"30s"`
+	Address     string        `env:"ADDRESS" env-default:"localhost:8080"`
+	Timeout     time.Duration `env:"TIMEOUT" env-default:"4s"`
+	IdleTimeout time.Duration `env:"IDLE_TIMEOUT" env-default:"30s"`
 }
 
 type DatabaseConfig struct {
