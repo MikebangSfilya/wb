@@ -31,7 +31,6 @@ func main() {
 		panic(err)
 	}
 	defer r.Close()
-
 	//TODO: init kafka
 
 	// TODO: init route
