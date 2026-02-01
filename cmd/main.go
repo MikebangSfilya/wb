@@ -37,14 +37,16 @@ func main() {
 		sl.Error("Database connection failed", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
+
+	if err := postgre.RunMigrations(cfg); err != nil {
+		sl.Error("Database migrations failed, use make migrate-up", "error", err)
+	}
 
 	r, err := redis2.New(ctx, cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		sl.Error("Redis connection failed", "error", err)
 		os.Exit(1)
 	}
-	defer r.Close()
 
 	//TODO: init kafka
 
@@ -75,6 +77,12 @@ func main() {
 			sl.Error("Server forced to shutdown", "error", err)
 			return err
 		}
+		db.Close()
+
+		if err := r.Close(); err != nil {
+			sl.Error("Server forced to close", "error", err)
+		}
+
 		sl.Info("shutting down gracefully")
 		return nil
 	})
