@@ -1,7 +1,7 @@
 -include .env
 export
 
-COMPOSE = docker compose -f docker-compose.yml
+COMPOSE = docker compose
 APP = wb-service
 BIN = bin/$(APP)
 MAIN_PATH = cmd/main.go
