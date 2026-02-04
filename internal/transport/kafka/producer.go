@@ -19,7 +19,6 @@ func NewProducer(ctx context.Context, brokers []string, topic string) (*Producer
 
 	conn, err := kafka.DialContext(ctx, "tcp", brokers[0])
 	if err != nil {
-		// ВОЗВРАЩАЕМ ошибку, обернув её
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	err = conn.Close()
