@@ -10,7 +10,7 @@ services:
         condition: service_healthy
     environment:
       - ADDRESS=0.0.0.0:8080
-      - DB_HOST=test-db
+      - DB_HOST=postgres
       - REDIS_HOST=redis
       - DB_PORT
       - DB_USER
@@ -21,8 +21,6 @@ services:
       - REDIS_DB
     ports:
       - "8080:8080"
-    volumes:
-      - ./config.yaml:/root/config.yaml
     networks:
       - wb-network
 
