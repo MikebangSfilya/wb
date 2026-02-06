@@ -36,6 +36,7 @@ func NewConsumer(l *slog.Logger, brokers []string, group, topic string, service 
 			Topic:    topic,
 			MinBytes: 10e3,
 			MaxBytes: 10e6,
+			MaxWait:  1 * time.Second,
 		}),
 		service: service,
 		l:       l,
@@ -52,7 +53,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 			if errors.Is(err, context.Canceled) {
 				return nil
 			}
-			c.l.Error("failed to fetch message", "error", err)
+			c.l.Error("failed to fetch message", "error", err.Error())
 			time.Sleep(1 * time.Second)
 			continue
 		}
@@ -62,7 +63,9 @@ func (c *Consumer) Start(ctx context.Context) error {
 		if err := c.reader.CommitMessages(ctx, m); err != nil {
 			c.l.Error("failed to commit message", "error", err)
 		}
+		c.l.Debug("message committed", "message", string(m.Key))
 	}
+
 }
 
 func (c *Consumer) processWithRetry(ctx context.Context, m kafka.Message) {
@@ -71,6 +74,7 @@ func (c *Consumer) processWithRetry(ctx context.Context, m kafka.Message) {
 		c.l.Error("skipping invalid json", "error", err, "offset", m.Offset)
 		return
 	}
+	validator.Init()
 	if err := validator.Validate(&order); err != nil {
 		c.l.Error("skipping invalid order", "error", err)
 		return
@@ -90,7 +94,9 @@ func (c *Consumer) processWithRetry(ctx context.Context, m kafka.Message) {
 		}
 
 		attempt++
-		c.l.Warn("failed to create order, retrying", "error", err)
+		c.l.Warn("failed to create order, retrying",
+			"error", err,
+			"attempt", attempt)
 
 		select {
 		case <-ctx.Done():

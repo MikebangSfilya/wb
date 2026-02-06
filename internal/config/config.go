@@ -13,6 +13,7 @@ type Config struct {
 	HTTPServer HTTPServer
 	Database   DatabaseConfig
 	Redis      RedisConfig
+	Kafka      KafkaConfig
 }
 
 type RedisConfig struct {
@@ -34,6 +35,12 @@ type DatabaseConfig struct {
 	User     string `env:"DB_USER" env-default:"postgres"`
 	Password string `env:"DB_PASSWORD" env-default:"secret"`
 	Name     string `env:"DB_NAME" env-default:"postgres"`
+}
+
+type KafkaConfig struct {
+	Brokers []string `env:"KAFKA_BROKERS" env-default:"localhost:9092"`
+	Topic   string   `env:"KAFKA_TOPIC" env-default:"orders"`
+	GroupID string   `env:"KAFKA_GROUP_ID" env-default:"wb-group"`
 }
 
 func Load() (*Config, error) {
