@@ -2,9 +2,11 @@ package postgresql
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/MikebangSfilya/wb/internal/model"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -30,16 +32,19 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 	}()
 
 	qOrder := `
-		INSERT INTO orders (
-        		order_id, track_number, entry, locale, internal_signature, 
-        		customer_id, delivery_service, shardkey, sm_id, data_created, oof_shard
+       INSERT INTO orders (
+               order_uid, track_number, entry, locale, internal_signature, 
+               customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-		ON CONFLICT (order_id) DO NOTFING
-		`
-	_, err = r.pool.Exec(ctx, qOrder, order.OrderUID, order.TrackNumber, order.Entry, order.Locale, order.InternalSignature,
+       ON CONFLICT (order_uid) DO NOTHING
+       `
+	t, err := tx.Exec(ctx, qOrder, order.OrderUID, order.TrackNumber, order.Entry, order.Locale, order.InternalSignature,
 		order.CustomerID, order.DeliveryService, order.Shardkey, order.SmID, order.DateCreated, order.OofShard)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
+	}
+	if t.RowsAffected() == 0 {
+		return nil
 	}
 
 	qDelivery := `
@@ -94,4 +99,70 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 	}
 
 	return nil
+}
+
+func (r *Repository) GetOrder(ctx context.Context, orderUID string) (*model.Order, error) {
+	const op = "postgresql.GetOrder"
+
+	qOrder := `
+		SELECT 
+			o.order_uid, o.track_number, o.entry, o.locale, o.internal_signature, 
+			o.customer_id, o.delivery_service, o.shardkey, o.sm_id, o.date_created, o.oof_shard,
+			d.name, d.phone, d.zip, d.city, d.address, d.region, d.email,
+			p.transaction, p.request_id, p.currency, p.provider, p.amount, p.payment_dt, 
+			p.bank, p.delivery_cost, p.goods_total, p.custom_fee
+		FROM orders o
+		JOIN delivery d ON o.order_uid = d.order_uid
+		JOIN payment p ON o.order_uid = p.order_uid
+		WHERE o.order_uid = $1
+	`
+
+	var o model.Order
+
+	err := r.pool.QueryRow(ctx, qOrder, orderUID).Scan(
+		&o.OrderUID, &o.TrackNumber, &o.Entry, &o.Locale, &o.InternalSignature,
+		&o.CustomerID, &o.DeliveryService, &o.Shardkey, &o.SmID, &o.DateCreated, &o.OofShard,
+		&o.Delivery.Name, &o.Delivery.Phone, &o.Delivery.Zip, &o.Delivery.City,
+		&o.Delivery.Address, &o.Delivery.Region, &o.Delivery.Email,
+		&o.Payment.Transaction, &o.Payment.RequestID, &o.Payment.Currency, &o.Payment.Provider,
+		&o.Payment.Amount, &o.Payment.PaymentDt, &o.Payment.Bank, &o.Payment.DeliveryCost,
+		&o.Payment.GoodsTotal, &o.Payment.CustomFee,
+	)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("%s: o not found: %w", op, err)
+		}
+		return nil, fmt.Errorf("%s: failed to query o: %w", op, err)
+	}
+
+	o.Items = make([]model.Item, 0)
+
+	qItems := `
+		SELECT 
+			chrt_id, track_number, price, rid, name, sale, size, 
+			total_price, nm_id, brand, status
+		FROM items
+		WHERE order_uid = $1
+	`
+
+	rows, err := r.pool.Query(ctx, qItems, orderUID)
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to query items: %w", op, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var i model.Item
+		err := rows.Scan(
+			&i.ChrtID, &i.TrackNumber, &i.Price, &i.Rid, &i.Name, &i.Sale, &i.Size,
+			&i.TotalPrice, &i.NmID, &i.Brand, &i.Status,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("%s: failed to scan item: %w", op, err)
+		}
+		o.Items = append(o.Items, i)
+	}
+
+	return &o, nil
 }

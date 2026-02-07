@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
 	"log/slog"
 	"net/http"
@@ -12,8 +13,12 @@ import (
 
 	"github.com/MikebangSfilya/wb/internal/config"
 	sl2 "github.com/MikebangSfilya/wb/internal/lib/log"
+	"github.com/MikebangSfilya/wb/internal/repository/postgresql"
 	redis2 "github.com/MikebangSfilya/wb/internal/repository/redis"
+	"github.com/MikebangSfilya/wb/internal/service"
 	"github.com/MikebangSfilya/wb/internal/storage/postgre"
+	"github.com/MikebangSfilya/wb/internal/transport/handlers"
+	"github.com/MikebangSfilya/wb/internal/transport/kafka"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"golang.org/x/sync/errgroup"
@@ -47,23 +52,32 @@ func main() {
 		sl.Error("Redis connection failed", "error", err)
 		os.Exit(1)
 	}
+	repo := postgresql.New(db.Pool)
+	svc := service.New(sl, repo, r)
 
-	//TODO: init kafka
+	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
 
-	// TODO: init route
+	h := handlers.New(sl, svc)
+
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 
+	router.Get("/order/{id}", h.GetOrder())
+
 	srv := newServer(cfg, router)
 	g, ctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return err
 		}
 		return nil
+	})
+
+	g.Go(func() error {
+		return consumer.Start(ctx)
 	})
 
 	g.Go(func() error {
@@ -78,6 +92,10 @@ func main() {
 			return err
 		}
 		db.Close()
+
+		if err := consumer.Close(); err != nil {
+			sl.Error("Kafka consumer close error", "error", err)
+		}
 
 		if err := r.Close(); err != nil {
 			sl.Error("Server forced to close", "error", err)
