@@ -64,7 +64,7 @@ func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Or
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	if err := s.cache.Set(ctx, orderPtr.OrderUID, order, 24*time.Hour); err != nil {
+	if err := s.cache.Set(ctx, orderPtr.OrderUID, orderPtr, 24*time.Hour); err != nil {
 		s.l.Error("failed to cache order", "error", err, "uid", orderPtr.OrderUID)
 	}
 
