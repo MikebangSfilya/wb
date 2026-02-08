@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel"
 )
 
 var ErrCacheMiss = errors.New("cache miss")
@@ -47,6 +48,9 @@ func New(ctx context.Context, host, port, password string, db int) (*Redis, erro
 }
 
 func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
+	tr := otel.Tracer("redis")
+	ctx, span := tr.Start(ctx, "redis.Get")
+	defer span.End()
 	data, err := json.Marshal(value)
 	if err != nil {
 		return fmt.Errorf("failed to marshal value for key %s: %w", key, err)
@@ -55,6 +59,9 @@ func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duratio
 }
 
 func (r *Redis) Get(ctx context.Context, key string, dest any) error {
+	tr := otel.Tracer("redis")
+	ctx, span := tr.Start(ctx, "redis.Get")
+	defer span.End()
 	data, err := r.Client.Get(ctx, key).Bytes()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {

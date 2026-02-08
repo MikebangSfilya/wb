@@ -13,6 +13,7 @@ import (
 
 	"github.com/MikebangSfilya/wb/internal/config"
 	sl2 "github.com/MikebangSfilya/wb/internal/lib/log"
+	"github.com/MikebangSfilya/wb/internal/lib/tracing"
 	"github.com/MikebangSfilya/wb/internal/repository/postgresql"
 	redis2 "github.com/MikebangSfilya/wb/internal/repository/redis"
 	"github.com/MikebangSfilya/wb/internal/service"
@@ -21,6 +22,7 @@ import (
 	"github.com/MikebangSfilya/wb/internal/transport/kafka"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/riandyrn/otelchi"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -34,6 +36,16 @@ func main() {
 	slog.SetDefault(sl)
 	sl.Info("config loaded, start application")
 
+	shutdownTracer, err := tracing.InitTracer(context.Background(), "wb-service", "localhost:4317")
+	if err != nil {
+		sl.Error("failed to init tracer", "error", err)
+		os.Exit(1)
+	}
+	defer func() {
+		if err := shutdownTracer(context.Background()); err != nil {
+			sl.Error("failed to shutdown tracer", "error", err)
+		}
+	}()
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -55,11 +67,10 @@ func main() {
 	repo := postgresql.New(db.Pool)
 	svc := service.New(sl, repo, r)
 
-	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
-
 	h := handlers.New(sl, svc)
 
 	router := chi.NewRouter()
+	router.Use(otelchi.Middleware("wb-service", otelchi.WithChiRoutes(router)))
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
@@ -78,6 +89,7 @@ func main() {
 		return nil
 	})
 
+	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
 	g.Go(func() error {
 		return consumer.Start(ctx)
 	})

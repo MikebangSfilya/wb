@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -35,7 +36,13 @@ func (h *Handler) GetOrder() http.HandlerFunc {
 		}
 		order, err := h.service.GetOrder(r.Context(), id)
 		if err != nil {
-			http.Error(w, "order not found", http.StatusNotFound)
+			if errors.Is(err, model.ErrNotFound) {
+				slog.Debug(err.Error())
+				http.Error(w, "order not found", http.StatusNotFound)
+				return
+			}
+			slog.Debug(err.Error())
+			http.Error(w, "internal server error", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
