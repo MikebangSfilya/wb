@@ -65,7 +65,9 @@ func main() {
 	router.Use(middleware.Recoverer)
 
 	router.Get("/order/{id}", h.GetOrder())
-
+	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./web/static/index.html")
+	})
 	srv := newServer(cfg, router)
 	g, ctx := errgroup.WithContext(ctx)
 
