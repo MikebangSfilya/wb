@@ -4,13 +4,14 @@ export
 COMPOSE = docker compose
 APP = wb-service
 BIN = bin/$(APP)
-MAIN_PATH = cmd/main.go
+MAIN_PATH = cmd/app/main.go
+PROD_PATH = cmd/producer/main.go
 DB_URL = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
 
 .PHONY: migrate-up migrate-down migrate-create migrate-version \
         tidy build run deps test bench clean \
         compose-build up up-infra down down-full logs \
-        db tables dev reset lint
+        db tables dev reset lint prod-run
 
 lint:
 	golangci-lint run ./...
@@ -37,6 +38,9 @@ build: deps
 
 run:
 	go run $(MAIN_PATH)
+
+prod-run:
+	go run $(PROD_PATH)
 
 deps:
 	go mod tidy

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Поиск заказа</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        input { padding: 10px; width: 70%; font-size: 16px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #result {
+            background: #f4f4f4;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Проверка заказа</h2>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="orderId" placeholder="Введите ID заказа">
+        <button onclick="fetchOrder()">Найти</button>
+    </div>
+
+    <div id="result">Здесь будет JSON...</div>
+</div>
+
+<script>
+    async function fetchOrder() {
+        const id = document.getElementById('orderId').value;
+        const resultBlock = document.getElementById('result');
+
+        if (!id) {
+            alert("Сначала введите ID!");
+            return;
+        }
+
+        resultBlock.textContent = "Загрузка...";
+
+        try {
+            const response = await fetch(`/order/${id}`);
+
+            if (!response.ok) {
+                resultBlock.textContent = `Ошибка: ${response.status} ${response.statusText}`;
+                if (response.status === 404) {
+                    resultBlock.textContent += "\nЗаказ с таким ID не найден.";
+                }
+                return;
+            }
+
+            const data = await response.json();
+            resultBlock.textContent = JSON.stringify(data, null, 2);
+
+        } catch (e) {
+            resultBlock.textContent = "Ошибка сети: " + e.message;
+        }
+    }
+</script>
+
+</body>
+</html>
