@@ -65,7 +65,7 @@ up:
 	$(COMPOSE) up -d --build
 
 up-infra:
-	$(COMPOSE) up -d postgres redis kafka
+	$(COMPOSE) up -d postgres redis kafka jaeger
 
 down:
 	$(COMPOSE) down

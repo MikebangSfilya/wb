@@ -8,6 +8,8 @@ import (
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 type Repository struct {
@@ -104,6 +106,10 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 func (r *Repository) GetOrder(ctx context.Context, orderUID string) (*model.Order, error) {
 	const op = "postgresql.GetOrder"
 
+	tr := otel.Tracer("postgres")
+	ctx, span := tr.Start(ctx, "db.select.orders")
+	defer span.End()
+
 	qOrder := `
 		SELECT 
 			o.order_uid, o.track_number, o.entry, o.locale, o.internal_signature, 
@@ -131,8 +137,10 @@ func (r *Repository) GetOrder(ctx context.Context, orderUID string) (*model.Orde
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%s: o not found: %w", op, err)
+			return nil, fmt.Errorf("%s: order not found: %w", op, err)
 		}
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "msg")
 		return nil, fmt.Errorf("%s: failed to query o: %w", op, err)
 	}
 

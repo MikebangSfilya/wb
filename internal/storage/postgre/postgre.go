@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/MikebangSfilya/wb/internal/config"
 	"github.com/golang-migrate/migrate/v4"
@@ -33,12 +34,21 @@ func New(ctx context.Context, cfg *config.Config) (*Storage, error) {
 		slog.String("database", cfg.Database.Name),
 	)
 
-	dbPool, err := pgxpool.New(ctx, connStr)
+	dbConfig, err := pgxpool.ParseConfig(connStr)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	if err := dbPool.Ping(context.Background()); err != nil {
+	dbConfig.MaxConns = 10
+	dbConfig.MinConns = 2
+	dbConfig.MaxConnLifetime = time.Hour
+
+	dbPool, err := pgxpool.NewWithConfig(ctx, dbConfig)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	if err := dbPool.Ping(ctx); err != nil {
 		dbPool.Close()
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}

@@ -9,6 +9,9 @@ import (
 
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/MikebangSfilya/wb/internal/repository/redis"
+	"github.com/jackc/pgx/v5"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 type Repository interface {
@@ -48,6 +51,12 @@ func (s *OrderService) CreateOrder(ctx context.Context, order *model.Order) erro
 
 func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Order, error) {
 	const op = "service.GetOrder"
+
+	tr := otel.Tracer("orders-service")
+	ctx, span := tr.Start(ctx, "service.GetOrder")
+	defer span.End()
+	span.SetAttributes(attribute.String("uid", orderUID))
+
 	var order model.Order
 
 	err := s.cache.Get(ctx, orderUID, &order)
@@ -62,6 +71,9 @@ func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Or
 
 	orderPtr, err := s.repo.GetOrder(ctx, orderUID)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, model.ErrNotFound
+		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 	if err := s.cache.Set(ctx, orderPtr.OrderUID, orderPtr, 24*time.Hour); err != nil {
