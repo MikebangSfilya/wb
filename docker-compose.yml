@@ -39,7 +39,6 @@ services:
   kafka:
     image: apache/kafka:latest
     container_name: kafka
-    user: root
     restart: unless-stopped
     environment:
       KAFKA_NODE_ID: 1
@@ -56,8 +55,6 @@ services:
       CLUSTER_ID: 'KDQq5pA6QlStu9_wxtoypw'
     ports:
       - "9092:9092"
-    volumes:
-      - kafka_data:/tmp/kraft-combined-logs
 
   jaeger:
     image: jaegertracing/all-in-one:latest
@@ -76,7 +73,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  kafka_data:
 
 networks:
   wb-network:
