@@ -61,8 +61,7 @@ tidy:
 compose-build:
 	$(COMPOSE) build
 
-up:
-	$(COMPOSE) up -d --build
+up: up-infra prod-run run
 
 up-infra:
 	$(COMPOSE) up -d postgres redis kafka jaeger

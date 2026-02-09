@@ -15,8 +15,8 @@ import (
 
 const (
 	baseDelay   = 1 * time.Second
-	maxDelay    = 30 * time.Second
-	maxAttempts = 30
+	maxDelay    = 15 * time.Second
+	maxAttempts = 15
 )
 
 type Service interface {
@@ -31,12 +31,13 @@ type Consumer struct {
 func NewConsumer(l *slog.Logger, brokers []string, group, topic string, service Service) *Consumer {
 	return &Consumer{
 		reader: kafka.NewReader(kafka.ReaderConfig{
-			Brokers:  brokers,
-			GroupID:  group,
-			Topic:    topic,
-			MinBytes: 10e3,
-			MaxBytes: 10e6,
-			MaxWait:  1 * time.Second,
+			Brokers:     brokers,
+			GroupID:     group,
+			Topic:       topic,
+			MinBytes:    10,
+			MaxBytes:    10e6,
+			MaxWait:     1 * time.Second,
+			StartOffset: kafka.FirstOffset,
 		}),
 		service: service,
 		l:       l,
@@ -74,7 +75,7 @@ func (c *Consumer) processWithRetry(ctx context.Context, m kafka.Message) {
 		c.l.Error("skipping invalid json", "error", err, "offset", m.Offset)
 		return
 	}
-	validator.Init()
+
 	if err := validator.Validate(&order); err != nil {
 		c.l.Error("skipping invalid order", "error", err)
 		return

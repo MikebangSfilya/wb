@@ -89,13 +89,21 @@ func main() {
 func sendOrder(prod *kafka.Producer, order model.Order) {
 	payload, err := json.Marshal(order)
 	if err != nil {
-		panic(err)
+		log.Printf("JSON Error: %v", err)
+		return
 	}
 
-	err = prod.SendMessage(context.Background(), order.OrderUID, payload)
-	if err != nil {
-		panic(err)
+	const maxRetries = 5
+
+	for range maxRetries {
+		err = prod.SendMessage(context.Background(), order.OrderUID, payload)
+		if err == nil {
+			log.Printf("Sent order: %s", order.OrderUID)
+			return
+		}
+		log.Printf("Attempt %d/%d, err %v. Retrying...", maxRetries, order.OrderUID, err)
+		time.Sleep(2 * time.Second)
 	}
 
-	log.Printf("Sent order: %s", order.OrderUID)
+	log.Printf("Failed to send order %s after %d attempts", order.OrderUID, maxRetries)
 }

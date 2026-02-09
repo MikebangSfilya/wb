@@ -14,6 +14,7 @@ import (
 	"github.com/MikebangSfilya/wb/internal/config"
 	sl2 "github.com/MikebangSfilya/wb/internal/lib/log"
 	"github.com/MikebangSfilya/wb/internal/lib/tracing"
+	"github.com/MikebangSfilya/wb/internal/lib/validator"
 	"github.com/MikebangSfilya/wb/internal/repository/postgresql"
 	redis2 "github.com/MikebangSfilya/wb/internal/repository/redis"
 	"github.com/MikebangSfilya/wb/internal/service"
@@ -31,6 +32,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	validator.Init()
 
 	sl := sl2.SetupLogger(cfg.Env)
 	slog.SetDefault(sl)
@@ -67,6 +70,8 @@ func main() {
 	repo := postgresql.New(db.Pool)
 	svc := service.New(sl, repo, r)
 
+	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
+	
 	h := handlers.New(sl, svc)
 
 	router := chi.NewRouter()
@@ -89,7 +94,6 @@ func main() {
 		return nil
 	})
 
-	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
 	g.Go(func() error {
 		return consumer.Start(ctx)
 	})
