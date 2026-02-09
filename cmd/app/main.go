@@ -39,16 +39,20 @@ func main() {
 	slog.SetDefault(sl)
 	sl.Info("config loaded, start application")
 
-	shutdownTracer, err := tracing.InitTracer(context.Background(), "wb-service", "localhost:4317")
+	shutdownTracer, err := tracing.InitTracer(context.Background(), "wb-service", cfg.Otel.Address)
 	if err != nil {
 		sl.Error("failed to init tracer", "error", err)
-		os.Exit(1)
+	} else {
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			if err := shutdownTracer(ctx); err != nil {
+				sl.Error("failed to shutdown tracer", "error", err)
+			}
+		}()
 	}
-	defer func() {
-		if err := shutdownTracer(context.Background()); err != nil {
-			sl.Error("failed to shutdown tracer", "error", err)
-		}
-	}()
+
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
@@ -71,7 +75,7 @@ func main() {
 	svc := service.New(sl, repo, r)
 
 	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
-	
+
 	h := handlers.New(sl, svc)
 
 	router := chi.NewRouter()

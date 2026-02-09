@@ -14,6 +14,7 @@ type Config struct {
 	Database   DatabaseConfig
 	Redis      RedisConfig
 	Kafka      KafkaConfig
+	Otel       OtelConfig
 }
 
 type RedisConfig struct {
@@ -41,6 +42,10 @@ type KafkaConfig struct {
 	Brokers []string `env:"KAFKA_BROKERS" env-default:"localhost:9092"`
 	Topic   string   `env:"KAFKA_TOPIC" env-default:"orders"`
 	GroupID string   `env:"KAFKA_GROUP_ID" env-default:"wb-group"`
+}
+
+type OtelConfig struct {
+	Address string `env:"OTEL_COLLECTOR_ADDRESS" env-default:"localhost:4317"`
 }
 
 func Load() (*Config, error) {

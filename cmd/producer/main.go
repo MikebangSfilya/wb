@@ -7,12 +7,18 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/MikebangSfilya/wb/internal/config"
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/MikebangSfilya/wb/internal/transport/kafka"
 )
 
 func main() {
-	prod, err := kafka.NewProducer(context.Background(), []string{"localhost:9092"}, "orders")
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	prod, err := kafka.NewProducer(context.Background(), cfg.Kafka.Brokers, cfg.Kafka.Topic)
 	if err != nil {
 		panic(err)
 	}

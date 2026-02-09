@@ -59,7 +59,10 @@ func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Or
 
 	var order model.Order
 
-	err := s.cache.Get(ctx, orderUID, &order)
+	cacheCtx, cancel := context.WithTimeout(ctx, 200*time.Millisecond)
+	defer cancel()
+
+	err := s.cache.Get(cacheCtx, orderUID, &order)
 	if err == nil {
 		s.l.Debug("got order", "uid", orderUID)
 		return &order, nil
