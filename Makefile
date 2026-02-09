@@ -7,6 +7,11 @@ BIN = bin/$(APP)
 MAIN_PATH = cmd/app/main.go
 PROD_PATH = cmd/producer/main.go
 DB_URL = postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=disable
+MIGRATE := $(shell command -v migrate 2> /dev/null)
+ifeq ($(MIGRATE),)
+    MIGRATE = $(shell go env GOPATH)/bin/migrate
+endif
+
 
 .PHONY: migrate-up migrate-down migrate-create migrate-version \
         tidy build run deps test bench clean \
@@ -17,21 +22,20 @@ lint:
 	golangci-lint run ./...
 
 migrate-up:
-	migrate -path ./db/migrations -database "$(DB_URL)" up
+	$(MIGRATE) -path ./db/migrations -database "$(DB_URL)" up
 
 migrate-down:
-	migrate -path ./db/migrations -database "$(DB_URL)" down 1
+	$(MIGRATE) -path ./db/migrations -database "$(DB_URL)" down 1
 
 migrate-create:
 ifeq ($(strip $(NAME)),)
 	@echo "Usage: make migrate-create NAME=some_name"
 	@exit 1
 endif
-	migrate create -ext sql -dir ./db/migrations -seq $(NAME)
+	$(MIGRATE) create -ext sql -dir ./db/migrations -seq $(NAME)
 
 migrate-version:
-	migrate -path ./db/migrations -database "$(DB_URL)" version
-
+	$(MIGRATE) -path ./db/migrations -database "$(DB_URL)" version
 build: deps
 	@mkdir -p bin
 	go build -o $(BIN) $(MAIN_PATH)
@@ -61,7 +65,11 @@ tidy:
 compose-build:
 	$(COMPOSE) build
 
-up: up-infra prod-run run
+up:
+	$(MAKE) up-infra
+	sleep 3
+	$(MAKE) prod-run
+	$(MAKE) run
 
 up-infra:
 	$(COMPOSE) up -d postgres redis kafka jaeger
