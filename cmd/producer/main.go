@@ -101,7 +101,7 @@ func sendOrder(prod *kafka.Producer, order model.Order) {
 			log.Printf("Sent order: %s", order.OrderUID)
 			return
 		}
-		log.Printf("Attempt %d/%d, err %v. Retrying...", maxRetries, order.OrderUID, err)
+		log.Printf("Attempt %d, err %v. Retrying...", maxRetries, err)
 		time.Sleep(2 * time.Second)
 	}
 
