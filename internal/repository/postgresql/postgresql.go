@@ -137,7 +137,7 @@ func (r *Repository) GetOrder(ctx context.Context, orderUID string) (*model.Orde
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, fmt.Errorf("%s: order not found: %w", op, err)
+			return nil, model.ErrNotFound
 		}
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "msg")
@@ -170,6 +170,10 @@ func (r *Repository) GetOrder(ctx context.Context, orderUID string) (*model.Orde
 			return nil, fmt.Errorf("%s: failed to scan item: %w", op, err)
 		}
 		o.Items = append(o.Items, i)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("%s: rows iteration: %w", op, err)
 	}
 
 	return &o, nil

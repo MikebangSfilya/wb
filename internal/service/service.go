@@ -9,7 +9,6 @@ import (
 
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/MikebangSfilya/wb/internal/repository/redis"
-	"github.com/jackc/pgx/v5"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
@@ -71,7 +70,7 @@ func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Or
 
 	orderPtr, err := s.repo.GetOrder(ctx, orderUID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, model.ErrNotFound) {
 			return nil, model.ErrNotFound
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
