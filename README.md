@@ -18,7 +18,7 @@ make up
 
 ```bash
   #Запуск redis, kafka, postgresql и jaeger
-  make up-inrfa
+  make up-infra
   # Запуск скрипта имитирующий приход заказов
   make prod-run
   # Запуск сервера, если по каким-то причинам миграции не применились, стоит использовать
