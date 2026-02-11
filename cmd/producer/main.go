@@ -101,13 +101,13 @@ func sendOrder(prod *kafka.Producer, order model.Order) {
 
 	const maxRetries = 5
 
-	for range maxRetries {
+	for i := 1; i <= maxRetries; i++ {
 		err = prod.SendMessage(context.Background(), order.OrderUID, payload)
 		if err == nil {
 			log.Printf("Sent order: %s", order.OrderUID)
 			return
 		}
-		log.Printf("Attempt %d, err %v. Retrying...", maxRetries, err)
+		log.Printf("Attempt %d/%d, err %v. Retrying...", i, maxRetries, err)
 		time.Sleep(2 * time.Second)
 	}
 

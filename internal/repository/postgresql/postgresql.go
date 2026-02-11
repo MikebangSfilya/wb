@@ -36,8 +36,8 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 	qOrder := `
        INSERT INTO orders (
                order_uid, track_number, entry, locale, internal_signature, 
-               customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+               customer_id, delivery_service, shardkey, sm_id, date_created, oof_shard) 
+			   VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        ON CONFLICT (order_uid) DO NOTHING
        `
 	t, err := tx.Exec(ctx, qOrder, order.OrderUID, order.TrackNumber, order.Entry, order.Locale, order.InternalSignature,
@@ -51,8 +51,8 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 
 	qDelivery := `
 		INSERT INTO delivery (
-			order_uid, name, phone, zip, city, address, region, email
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+			order_uid, name, phone, zip, city, address, region, email) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`
 	_, err = tx.Exec(ctx, qDelivery,
 		order.OrderUID,
@@ -66,8 +66,8 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 	qPayment := `
 		INSERT INTO payment (
 			transaction, order_uid, request_id, currency, provider, amount, 
-			payment_dt, bank, delivery_cost, goods_total, custom_fee
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+			payment_dt, bank, delivery_cost, goods_total, custom_fee)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 	`
 	_, err = tx.Exec(ctx, qPayment,
 		order.Payment.Transaction, order.OrderUID, order.Payment.RequestID, order.Payment.Currency,
@@ -82,8 +82,8 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 	qItems := `
 		INSERT INTO items (
 			order_uid, chrt_id, track_number, price, rid, name, sale, 
-			size, total_price, nm_id, brand, status
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+			size, total_price, nm_id, brand, status)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 	`
 	for _, item := range order.Items {
 		_, err := tx.Exec(ctx, qItems,
