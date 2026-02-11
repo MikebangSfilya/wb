@@ -49,7 +49,7 @@ func New(ctx context.Context, host, port, password string, db int) (*Redis, erro
 
 func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
 	tr := otel.Tracer("redis")
-	ctx, span := tr.Start(ctx, "redis.Get")
+	ctx, span := tr.Start(ctx, "redis.Set")
 	defer span.End()
 	data, err := json.Marshal(value)
 	if err != nil {

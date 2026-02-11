@@ -24,6 +24,9 @@ func (m *MockRepo) CreateOrder(ctx context.Context, order *model.Order) error {
 
 func (m *MockRepo) GetOrder(ctx context.Context, orderUID string) (*model.Order, error) {
 	args := m.Called(ctx, orderUID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
 	return args.Get(0).(*model.Order), args.Error(1)
 }
 
@@ -116,7 +119,7 @@ func TestOrderService_GetOrder(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:  "cache_miss",
+			name:  "cache_miss_repo_success",
 			order: &model.Order{OrderUID: "034"},
 			mockBehavior: func(r *MockRepo, c *MockCache, order *model.Order) {
 				c.On("Get", mock.Anything, order.OrderUID, mock.Anything).Return(errors.New("cache miss"))
@@ -124,6 +127,24 @@ func TestOrderService_GetOrder(t *testing.T) {
 				c.On("Set", mock.Anything, order.OrderUID, order, mock.Anything).Return(nil)
 			},
 			wantErr: false,
+		},
+		{
+			name:  "cache_miss_repo_not_found",
+			order: &model.Order{OrderUID: "034"},
+			mockBehavior: func(r *MockRepo, c *MockCache, order *model.Order) {
+				c.On("Get", mock.Anything, order.OrderUID, mock.Anything).Return(errors.New("cache miss"))
+				r.On("GetOrder", mock.Anything, order.OrderUID).Return((*model.Order)(nil), model.ErrNotFound)
+			},
+			wantErr: true,
+		},
+		{
+			name:  "cache_miss_repo_error",
+			order: &model.Order{OrderUID: "034"},
+			mockBehavior: func(r *MockRepo, c *MockCache, order *model.Order) {
+				c.On("Get", mock.Anything, order.OrderUID, mock.Anything).Return(errors.New("cache miss"))
+				r.On("GetOrder", mock.Anything, order.OrderUID).Return((*model.Order)(nil), errors.New("db error"))
+			},
+			wantErr: true,
 		},
 	}
 
@@ -136,10 +157,16 @@ func TestOrderService_GetOrder(t *testing.T) {
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 			svc := New(logger, mockRepo, mockCache)
 			order, err := svc.GetOrder(context.Background(), tt.order.OrderUID)
-			if !tt.wantErr {
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Nil(t, order)
+			} else {
 				assert.NoError(t, err)
 				assert.NotNil(t, order)
 			}
+
+			mockRepo.AssertExpectations(t)
+			mockCache.AssertExpectations(t)
 		})
 	}
 }

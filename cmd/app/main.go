@@ -97,6 +97,9 @@ func main() {
 		}
 		return nil
 	})
+	sl.Info("Server is running",
+		slog.String("url", "http://"+cfg.HTTPServer.Address),
+	)
 
 	g.Go(func() error {
 		return consumer.Start(ctx)

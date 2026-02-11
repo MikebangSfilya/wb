@@ -42,9 +42,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, order *model.Order) erro
 	if err := s.repo.CreateOrder(ctx, order); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	if err := s.cache.Set(ctx, order.OrderUID, order, 24*time.Hour); err != nil {
-		s.l.Error("failed to cache order", "error", err, "uid", order.OrderUID)
-	}
+	go s.setCache(order.OrderUID, order, 24*time.Hour)
 	return nil
 }
 
@@ -78,9 +76,19 @@ func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Or
 		}
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	if err := s.cache.Set(ctx, orderPtr.OrderUID, orderPtr, 24*time.Hour); err != nil {
-		s.l.Error("failed to cache order", "error", err, "uid", orderPtr.OrderUID)
-	}
+	go s.setCache(orderPtr.OrderUID, orderPtr, 24*time.Hour)
 
 	return orderPtr, nil
+}
+
+func (s *OrderService) setCache(key string, value any, ttl time.Duration) {
+	cacheCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	if err := s.cache.Set(cacheCtx, key, value, ttl); err != nil {
+
+		s.l.Error("async cache set failed",
+			slog.String("key", key),
+			slog.String("error", err.Error()),
+		)
+	}
 }
