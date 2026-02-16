@@ -11,12 +11,14 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var ErrCacheMiss = errors.New("cache miss")
 
 type Redis struct {
 	Client *redis.Client
+	tr     trace.Tracer
 }
 
 func New(ctx context.Context, host, port, password string, db int) (*Redis, error) {
@@ -44,12 +46,11 @@ func New(ctx context.Context, host, port, password string, db int) (*Redis, erro
 
 	slog.Info("Redis connected successfully", slog.String("addr", addr))
 
-	return &Redis{Client: client}, nil
+	return &Redis{Client: client, tr: otel.Tracer("redis")}, nil
 }
 
 func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {
-	tr := otel.Tracer("redis")
-	ctx, span := tr.Start(ctx, "redis.Set")
+	ctx, span := r.tr.Start(ctx, "redis.Set")
 	defer span.End()
 	data, err := json.Marshal(value)
 	if err != nil {
@@ -59,8 +60,7 @@ func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duratio
 }
 
 func (r *Redis) Get(ctx context.Context, key string, dest any) error {
-	tr := otel.Tracer("redis")
-	ctx, span := tr.Start(ctx, "redis.Get")
+	ctx, span := r.tr.Start(ctx, "redis.Get")
 	defer span.End()
 	data, err := r.Client.Get(ctx, key).Bytes()
 	if err != nil {

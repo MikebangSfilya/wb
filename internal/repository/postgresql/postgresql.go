@@ -10,15 +10,18 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Repository struct {
 	pool *pgxpool.Pool
+	tr   trace.Tracer
 }
 
 func New(pool *pgxpool.Pool) *Repository {
 	return &Repository{
 		pool: pool,
+		tr:   otel.Tracer("postgres"),
 	}
 }
 
@@ -106,8 +109,7 @@ func (r *Repository) CreateOrder(ctx context.Context, order *model.Order) error 
 func (r *Repository) GetOrder(ctx context.Context, orderUID string) (*model.Order, error) {
 	const op = "postgresql.GetOrder"
 
-	tr := otel.Tracer("postgres")
-	ctx, span := tr.Start(ctx, "db.select.orders")
+	ctx, span := r.tr.Start(ctx, "db.select.orders")
 	defer span.End()
 
 	qOrder := `

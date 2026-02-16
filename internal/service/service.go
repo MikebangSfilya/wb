@@ -11,6 +11,8 @@ import (
 	"github.com/MikebangSfilya/wb/internal/repository/redis"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Repository interface {
@@ -27,6 +29,7 @@ type OrderService struct {
 	repo  Repository
 	cache Cache
 	l     *slog.Logger
+	tr    trace.Tracer
 }
 
 func New(l *slog.Logger, repo Repository, cache Cache) *OrderService {
@@ -34,12 +37,18 @@ func New(l *slog.Logger, repo Repository, cache Cache) *OrderService {
 		repo:  repo,
 		cache: cache,
 		l:     l,
+		tr:    otel.Tracer("orders-service"),
 	}
 }
 
 func (s *OrderService) CreateOrder(ctx context.Context, order *model.Order) error {
 	const op = "service.CreateOrder"
+	ctx, span := s.tr.Start(ctx, "service.CreateOrder")
+	defer span.End()
+	span.SetAttributes(attribute.String("order_uid", order.OrderUID))
 	if err := s.repo.CreateOrder(ctx, order); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	s.setCache(ctx, order.OrderUID, order, 24*time.Hour)
@@ -49,8 +58,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, order *model.Order) erro
 func (s *OrderService) GetOrder(ctx context.Context, orderUID string) (*model.Order, error) {
 	const op = "service.GetOrder"
 
-	tr := otel.Tracer("orders-service")
-	ctx, span := tr.Start(ctx, "service.GetOrder")
+	ctx, span := s.tr.Start(ctx, "service.GetOrder")
 	defer span.End()
 	span.SetAttributes(attribute.String("uid", orderUID))
 
