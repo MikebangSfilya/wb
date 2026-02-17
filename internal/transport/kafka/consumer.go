@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"time"
 
@@ -51,7 +52,7 @@ func (c *Consumer) Start(ctx context.Context) error {
 	for {
 		m, err := c.reader.FetchMessage(ctx)
 		if err != nil {
-			if errors.Is(err, context.Canceled) {
+			if errors.Is(err, context.Canceled) || errors.Is(err, io.EOF) {
 				return nil
 			}
 			c.l.Error("failed to fetch message", "error", err.Error())
