@@ -171,7 +171,7 @@ func TestPostgresRepository(t *testing.T) {
 			wantOrder: order,
 		},
 		{
-			name:      "non-existent_order",
+			name:      "non_existent_order",
 			uid:       "missing-uid-999",
 			wantErr:   model.ErrNotFound,
 			wantOrder: nil,
