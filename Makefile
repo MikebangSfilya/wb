@@ -72,7 +72,7 @@ up:
 	$(MAKE) run
 
 up-infra:
-	$(COMPOSE) up -d postgres redis kafka jaeger
+	$(COMPOSE) up -d postgres redis kafka jaeger prometheus grafana
 
 down:
 	$(COMPOSE) down

@@ -13,6 +13,7 @@ import (
 
 	"github.com/MikebangSfilya/wb/internal/config"
 	sl2 "github.com/MikebangSfilya/wb/internal/lib/log"
+	"github.com/MikebangSfilya/wb/internal/lib/metrics"
 	"github.com/MikebangSfilya/wb/internal/lib/tracing"
 	"github.com/MikebangSfilya/wb/internal/lib/validator"
 	"github.com/MikebangSfilya/wb/internal/repository/postgresql"
@@ -23,6 +24,7 @@ import (
 	"github.com/MikebangSfilya/wb/internal/transport/kafka"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/riandyrn/otelchi"
 	"golang.org/x/sync/errgroup"
 )
@@ -38,6 +40,8 @@ func main() {
 	sl := sl2.SetupLogger(cfg.Env)
 	slog.SetDefault(sl)
 	sl.Info("config loaded, start application")
+
+	m := metrics.New()
 
 	shutdownTracer, err := tracing.InitTracer(context.Background(), "wb-service", cfg.Otel.Address)
 	if err != nil {
@@ -72,7 +76,7 @@ func main() {
 		os.Exit(1)
 	}
 	repo := postgresql.New(db.Pool)
-	svc := service.New(sl, repo, r)
+	svc := service.New(sl, repo, r, m)
 
 	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
 
@@ -80,10 +84,12 @@ func main() {
 
 	router := chi.NewRouter()
 	router.Use(otelchi.Middleware("wb-service", otelchi.WithChiRoutes(router)))
+	router.Use(m.Middleware)
 	router.Use(middleware.RequestID)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 
+	router.Handle("/metrics", promhttp.Handler())
 	router.Get("/order/{id}", h.GetOrder())
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "./web/static/index.html")
