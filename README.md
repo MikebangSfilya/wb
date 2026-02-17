@@ -115,6 +115,13 @@ make up
 ```
 
 
-## Jeager UI 
+## Jaeger UI 
 
 Для доступа к просмотрам трейсов стоит перейти по `http://localhost:16686`
+
+## Метрики и Графики
+
+* **Prometheus**: доступен по адресу `http://localhost:9090`. 
+* **Grafana**: доступна по адресу `http://localhost:3000`. 
+    * Логин: `admin`
+    * Пароль: `admin`
