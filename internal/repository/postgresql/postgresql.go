@@ -8,7 +8,6 @@ import (
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -18,10 +17,10 @@ type Repository struct {
 	tr   trace.Tracer
 }
 
-func New(pool *pgxpool.Pool) *Repository {
+func New(pool *pgxpool.Pool, tr trace.Tracer) *Repository {
 	return &Repository{
 		pool: pool,
-		tr:   otel.Tracer("postgres"),
+		tr:   tr,
 	}
 }
 

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/redis/go-redis/v9"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -21,7 +20,7 @@ type Redis struct {
 	tr     trace.Tracer
 }
 
-func New(ctx context.Context, host, port, password string, db int) (*Redis, error) {
+func New(ctx context.Context, host, port, password string, db int, tr trace.Tracer) (*Redis, error) {
 	const op = "repository.redis.New"
 
 	log := slog.With("op", op)
@@ -46,7 +45,7 @@ func New(ctx context.Context, host, port, password string, db int) (*Redis, erro
 
 	slog.Info("Redis connected successfully", slog.String("addr", addr))
 
-	return &Redis{Client: client, tr: otel.Tracer("redis")}, nil
+	return &Redis{Client: client, tr: tr}, nil
 }
 
 func (r *Redis) Set(ctx context.Context, key string, value any, ttl time.Duration) error {

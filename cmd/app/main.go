@@ -43,7 +43,7 @@ func main() {
 
 	m := metrics.New()
 
-	shutdownTracer, err := tracing.InitTracer(context.Background(), "wb-service", cfg.Otel.Address)
+	tr, shutdownTracer, err := tracing.InitTracer(context.Background(), "wb-service", cfg.Otel.Address)
 	if err != nil {
 		sl.Error("failed to init tracer", "error", err)
 	} else {
@@ -70,13 +70,13 @@ func main() {
 		sl.Error("Database migrations failed, use make migrate-up", "error", err)
 	}
 
-	r, err := redis2.New(ctx, cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB)
+	r, err := redis2.New(ctx, cfg.Redis.Host, cfg.Redis.Port, cfg.Redis.Password, cfg.Redis.DB, tr)
 	if err != nil {
 		sl.Error("Redis connection failed", "error", err)
 		os.Exit(1)
 	}
-	repo := postgresql.New(db.Pool)
-	svc := service.New(sl, repo, r, m)
+	repo := postgresql.New(db.Pool, tr)
+	svc := service.New(sl, repo, r, m, tr)
 
 	consumer := kafka.NewConsumer(sl, cfg.Kafka.Brokers, cfg.Kafka.GroupID, cfg.Kafka.Topic, svc)
 

@@ -10,7 +10,6 @@ import (
 	"github.com/MikebangSfilya/wb/internal/lib/metrics"
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/MikebangSfilya/wb/internal/repository/redis"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -34,12 +33,12 @@ type OrderService struct {
 	m     *metrics.Metrics
 }
 
-func New(l *slog.Logger, repo Repository, cache Cache, m *metrics.Metrics) *OrderService {
+func New(l *slog.Logger, repo Repository, cache Cache, m *metrics.Metrics, tr trace.Tracer) *OrderService {
 	return &OrderService{
 		repo:  repo,
 		cache: cache,
 		l:     l,
-		tr:    otel.Tracer("orders-service"),
+		tr:    tr,
 		m:     m,
 	}
 }
