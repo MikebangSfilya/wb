@@ -8,9 +8,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/MikebangSfilya/wb/internal/lib/metrics"
 	"github.com/MikebangSfilya/wb/internal/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 type MockRepo struct {
@@ -88,7 +90,9 @@ func TestOrderService_CreateOrder(t *testing.T) {
 			mockCache := &MockCache{}
 			tt.mockBehavior(mockRepo, mockCache, tt.order)
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			svc := New(logger, mockRepo, mockCache, nil, nil)
+			testMetrics := metrics.NewTestMetrics()
+			testTracer := noop.NewTracerProvider().Tracer("test")
+			svc := New(logger, mockRepo, mockCache, testMetrics, testTracer)
 			err := svc.CreateOrder(context.Background(), tt.order)
 			if !tt.wantErr {
 				assert.NoError(t, err)
@@ -155,7 +159,9 @@ func TestOrderService_GetOrder(t *testing.T) {
 			mockCache := &MockCache{}
 			tt.mockBehavior(mockRepo, mockCache, tt.order)
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			svc := New(logger, mockRepo, mockCache, nil, nil)
+			testMetrics := metrics.NewTestMetrics()
+			testTracer := noop.NewTracerProvider().Tracer("test")
+			svc := New(logger, mockRepo, mockCache, testMetrics, testTracer)
 			order, err := svc.GetOrder(context.Background(), tt.order.OrderUID)
 			if tt.wantErr {
 				assert.Error(t, err)

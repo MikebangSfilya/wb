@@ -66,3 +66,23 @@ func (m *Metrics) Middleware(next http.Handler) http.Handler {
 		m.requestCount.WithLabelValues(method, path, status).Inc()
 	})
 }
+
+func NewTestMetrics() *Metrics {
+	return &Metrics{
+		OrdersCreated: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "test_orders_created",
+		}),
+		CacheHits: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "test_cache_hits",
+		}),
+		CacheMisses: prometheus.NewCounter(prometheus.CounterOpts{
+			Name: "test_cache_misses",
+		}),
+		requestDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name: "test_request_duration",
+		}, []string{"method", "path"}),
+		requestCount: prometheus.NewCounterVec(prometheus.CounterOpts{
+			Name: "test_request_count",
+		}, []string{"method", "path", "status"}),
+	}
+}

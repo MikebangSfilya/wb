@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go/modules/redis"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestRedisRepository(t *testing.T) {
@@ -28,7 +29,7 @@ func TestRedisRepository(t *testing.T) {
 	natPort, err := redisContainer.MappedPort(ctx, "6379")
 	require.NoError(t, err)
 
-	r, err := New(ctx, host, natPort.Port(), "", 0, nil)
+	r, err := New(ctx, host, natPort.Port(), "", 0, noop.NewTracerProvider().Tracer("test"))
 	require.NoError(t, err)
 	defer func() { _ = r.Close() }()
 

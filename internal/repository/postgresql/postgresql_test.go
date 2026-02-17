@@ -12,6 +12,7 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.opentelemetry.io/otel/trace/noop"
 )
 
 func TestPostgresRepository(t *testing.T) {
@@ -45,7 +46,7 @@ func TestPostgresRepository(t *testing.T) {
 	_, err = pool.Exec(ctx, initSQL)
 	require.NoError(t, err, "failed to init tables")
 
-	repo := New(pool, nil)
+	repo := New(pool, noop.NewTracerProvider().Tracer("test"))
 
 	fixedTime := time.Date(2023, 11, 26, 12, 0, 0, 0, time.UTC).Truncate(time.Microsecond)
 	order := &model.Order{
