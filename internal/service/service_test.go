@@ -88,7 +88,7 @@ func TestOrderService_CreateOrder(t *testing.T) {
 			mockCache := &MockCache{}
 			tt.mockBehavior(mockRepo, mockCache, tt.order)
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			svc := New(logger, mockRepo, mockCache)
+			svc := New(logger, mockRepo, mockCache, nil, nil)
 			err := svc.CreateOrder(context.Background(), tt.order)
 			if !tt.wantErr {
 				assert.NoError(t, err)
@@ -155,7 +155,7 @@ func TestOrderService_GetOrder(t *testing.T) {
 			mockCache := &MockCache{}
 			tt.mockBehavior(mockRepo, mockCache, tt.order)
 			logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-			svc := New(logger, mockRepo, mockCache)
+			svc := New(logger, mockRepo, mockCache, nil, nil)
 			order, err := svc.GetOrder(context.Background(), tt.order.OrderUID)
 			if tt.wantErr {
 				assert.Error(t, err)

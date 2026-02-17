@@ -28,7 +28,7 @@ func TestRedisRepository(t *testing.T) {
 	natPort, err := redisContainer.MappedPort(ctx, "6379")
 	require.NoError(t, err)
 
-	r, err := New(ctx, host, natPort.Port(), "", 0)
+	r, err := New(ctx, host, natPort.Port(), "", 0, nil)
 	require.NoError(t, err)
 	defer func() { _ = r.Close() }()
 

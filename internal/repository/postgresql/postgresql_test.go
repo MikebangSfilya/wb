@@ -45,7 +45,7 @@ func TestPostgresRepository(t *testing.T) {
 	_, err = pool.Exec(ctx, initSQL)
 	require.NoError(t, err, "failed to init tables")
 
-	repo := New(pool)
+	repo := New(pool, nil)
 
 	fixedTime := time.Date(2023, 11, 26, 12, 0, 0, 0, time.UTC).Truncate(time.Microsecond)
 	order := &model.Order{
